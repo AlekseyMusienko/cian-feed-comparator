@@ -1,6 +1,6 @@
 from flask import Flask, Response
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, Filters, ConversationHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import requests
 import xml.etree.ElementTree as ET
 import csv
@@ -89,15 +89,15 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 def main():
     """Запускает бот с вебхуком."""
-    # Используем токен, предоставленный вами
+    # Используем предоставленный токен
     application = Application.builder().token("8054808302:AAGWzAFYyVWWdCaIi5TzVN-s905cBNtrTms").build()
 
     # Настраиваем ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("compare", start)],
         states={
-            OLD_FEED: [MessageHandler(Filters.text & ~Filters.command, get_old_feed)],
-            NEW_FEED: [MessageHandler(Filters.text & ~Filters.command, compare_feeds)],
+            OLD_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_old_feed)],
+            NEW_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, compare_feeds)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
