@@ -1,45 +1,65 @@
-from flask import Flask, Response
+from flask import Flask, request, Response
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, Filters, ConversationHandler, ContextTypes
 import requests
 import xml.etree.ElementTree as ET
 import csv
 import io
 import logging
+import json
 
 app = Flask(__name__)
 
-# Настройка логирования для отладки
+# Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Состояния для ConversationHandler
 OLD_FEED, NEW_FEED = range(2)
 
+# Глобальная переменная для Application
+application = None
+
 # Эндпоинт для проверки активности сервера (для UptimeRobot)
 @app.route('/health')
 def health_check():
+    logger.info("Health check endpoint called")
     return Response("OK", status=200)
+
+# Эндпоинт для обработки вебхука Telegram
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    logger.info("Webhook endpoint called")
+    try:
+        update = Update.de_json(json.loads(request.get_data().decode('utf-8')), application.bot)
+        await application.process_update(update)
+        logger.info("Webhook processed successfully")
+        return Response("OK", status=200)
+    except Exception as e:
+        logger.error(f"Error processing webhook: {str(e)}")
+        return Response(f"Error: {str(e)}", status=500)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Запускает процесс сравнения, запрашивая URL старого фида."""
+    logger.info(f"User {update.effective_user.id} started comparison")
     await update.message.reply_text("Send the URL of the old feed.")
     return OLD_FEED
 
 async def get_old_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Сохраняет URL старого фида и запрашивает URL нового."""
     context.user_data['old_feed'] = update.message.text
+    logger.info(f"Old feed URL received: {context.user_data['old_feed']}")
     await update.message.reply_text("Now send the URL of the new feed.")
     return NEW_FEED
 
 async def compare_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Сравнивает фиды и отправляет отчет в виде CSV."""
     new_feed_url = update.message.text
-    old_feed_url = context.user_data['old_feed']
+    logger.info(f"New feed URL received: {new_feed_url}")
     
     try:
         # Загружаем фиды с таймаутом
-        old_feed = requests.get(old_feed_url, timeout=10).content
+        old_feed = requests.get(context.user_data['old_feed'], timeout=10).content
         new_feed = requests.get(new_feed_url, timeout=10).content
         
         # Парсим XML
@@ -57,6 +77,7 @@ async def compare_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         # Проверяем, есть ли данные
         if not result:
             await update.message.reply_text("No ExternalIds found in feeds.")
+            logger.info("No ExternalIds found")
             return ConversationHandler.END
 
         # Формируем CSV-отчет
@@ -72,45 +93,58 @@ async def compare_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             filename="feed_comparison.csv",
             caption="Comparison results"
         )
+        logger.info("Comparison results sent as CSV")
         
     except requests.RequestException as e:
         await update.message.reply_text(f"Error fetching feeds: {str(e)}")
+        logger.error(f"Request error: {str(e)}")
     except ET.ParseError as e:
         await update.message.reply_text(f"Invalid XML format: {str(e)}")
+        logger.error(f"XML parse error: {str(e)}")
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
     
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Отменяет процесс сравнения."""
+    logger.info("Comparison cancelled")
     await update.message.reply_text("Comparison cancelled.")
     return ConversationHandler.END
 
 def main():
     """Запускает бот с вебхуком."""
-    # Используем предоставленный токен
-    application = Application.builder().token("8054808302:AAGWzAFYyVWWdCaIi5TzVN-s905cBNtrTms").build()
+    global application
+    logger.info("Starting bot...")
+    try:
+        application = Application.builder().token("8054808302:AAGWzAFYyVWWdCaIi5TzVN-s905cBNtrTms").build()
 
-    # Настраиваем ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("compare", start)],
-        states={
-            OLD_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_old_feed)],
-            NEW_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, compare_feeds)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
-    
-    application.add_handler(conv_handler)
-    
-    # Запускаем бот с вебхуком
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=8443,
-        url_path="/webhook",
-        webhook_url="https://cian-feed-comparator.onrender.com/webhook"
-    )
+        # Настраиваем ConversationHandler
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler("compare", start)],
+            states={
+                OLD_FEED: [MessageHandler(Filters.text & ~Filters.command, get_old_feed)],
+                NEW_FEED: [MessageHandler(Filters.text & ~Filters.command, compare_feeds)],
+            },
+            fallbacks=[CommandHandler("cancel", cancel)],
+        )
+        
+        application.add_handler(conv_handler)
+        
+        # Запускаем бот с вебхуком
+        logger.info("Setting up webhook...")
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=8443,
+            url_path="/webhook",
+            webhook_url="https://cian-feed-comparator.onrender.com/webhook"
+        )
+        logger.info("Webhook setup complete")
+    except Exception as e:
+        logger.error(f"Failed to start bot: {str(e)}")
+        raise
 
 if __name__ == "__main__":
+    main()
     app.run(host="0.0.0.0", port=8443)
