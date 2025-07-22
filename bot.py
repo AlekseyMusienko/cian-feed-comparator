@@ -50,9 +50,7 @@ async def get_old_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     """Сохраняет URL старого фида и запрашивает URL нового."""
     context.user_data['old_feed'] = update.message.text
     logger.info(f"Old feed URL received: {context.user_data['old_feed']}")
-    await update.message.reply_text("Now send
-
- the URL of the new feed.")
+    await update.message.reply_text("Now send the URL of the new feed.")
     return NEW_FEED
 
 async def compare_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
