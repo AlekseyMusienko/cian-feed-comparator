@@ -1,6 +1,7 @@
 from flask import Flask, request, Response
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, Filters, ConversationHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes
+from telegram.ext.filters import Text, Command
 import requests
 import xml.etree.ElementTree as ET
 import csv
@@ -49,7 +50,9 @@ async def get_old_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     """Сохраняет URL старого фида и запрашивает URL нового."""
     context.user_data['old_feed'] = update.message.text
     logger.info(f"Old feed URL received: {context.user_data['old_feed']}")
-    await update.message.reply_text("Now send the URL of the new feed.")
+    await update.message.reply_text("Now send
+
+ the URL of the new feed.")
     return NEW_FEED
 
 async def compare_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -124,8 +127,8 @@ def main():
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("compare", start)],
             states={
-                OLD_FEED: [MessageHandler(Filters.text & ~Filters.command, get_old_feed)],
-                NEW_FEED: [MessageHandler(Filters.text & ~Filters.command, compare_feeds)],
+                OLD_FEED: [MessageHandler(Text() & ~Command(), get_old_feed)],
+                NEW_FEED: [MessageHandler(Text() & ~Command(), compare_feeds)],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
         )
