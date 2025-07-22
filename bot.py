@@ -8,6 +8,7 @@ import csv
 import io
 import logging
 import json
+import asyncio
 
 app = Flask(__name__)
 
@@ -114,11 +115,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Comparison cancelled.")
     return ConversationHandler.END
 
-def main():
+async def main():
     """Запускает бот с вебхуком."""
     global application
     logger.info("Starting bot...")
     try:
+        # Инициализация Application
         application = Application.builder().token("8054808302:AAGWzAFYyVWWdCaIi5TzVN-s905cBNtrTms").build()
 
         # Настраиваем ConversationHandler
@@ -133,19 +135,21 @@ def main():
         
         application.add_handler(conv_handler)
         
-        # Запускаем бот с вебхуком
+        # Инициализация приложения
+        await application.initialize()
+        logger.info("Application initialized")
+
+        # Установка вебхука
         logger.info("Setting up webhook...")
-        application.run_webhook(
-            listen="0.0.0.0",
-            port=8443,
-            url_path="/webhook",
-            webhook_url="https://cian-feed-comparator.onrender.com/webhook"
-        )
+        await application.bot.set_webhook(url="https://cian-feed-comparator.onrender.com/webhook")
         logger.info("Webhook setup complete")
+        
     except Exception as e:
         logger.error(f"Failed to start bot: {str(e)}")
         raise
 
 if __name__ == "__main__":
-    main()
+    # Запускаем main в асинхронном режиме
+    asyncio.run(main())
+    # Запускаем Flask-сервер
     app.run(host="0.0.0.0", port=8443)
