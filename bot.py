@@ -109,7 +109,7 @@ def main():
         listen="0.0.0.0",
         port=8443,
         url_path="/webhook",
-        webhook_url="https://cian-feed-comparator.onrender.com"
+        webhook_url="https://cian-feed-comparator.onrender.com/webhook"
     )
 
 if __name__ == "__main__":
