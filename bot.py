@@ -1,16 +1,13 @@
-from flask import Flask, request, Response
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes
-from telegram.ext.filters import Text, Command
-import requests
-import xml.etree.ElementTree as ET
+import logging
+import asyncio
+import json
 import csv
 import io
-import logging
-import json
-import asyncio
-
-app = Flask(__name__)
+import requests
+import xml.etree.ElementTree as ET
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, ConversationHandler
+from telegram.ext.filters import Text
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -141,7 +138,7 @@ async def main():
 
         # Установка вебхука
         logger.info("Setting up webhook...")
-        await application.bot.set_webhook(url="https://cian-feed-comparator.onrender.com/webhook")
+        await application.bot.set_webhook(url="https://yourdomain.com/webhook")
         logger.info("Webhook setup complete")
         
     except Exception as e:
@@ -151,5 +148,3 @@ async def main():
 if __name__ == "__main__":
     # Запускаем main в асинхронном режиме
     asyncio.run(main())
-    # Запускаем Flask-сервер
-    app.run(host="0.0.0.0", port=8443)
