@@ -1,16 +1,15 @@
-import logging
-import asyncio
-import json
-import csv
-import io
+from flask import Flask, request, Response
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes
+from telegram.ext import filters
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, Response
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, ConversationHandler
-from telegram.ext.filters import Text
+import csv
+import io
+import logging
+import json
+import asyncio
 
-# Инициализация Flask-приложения
 app = Flask(__name__)
 
 # Настройка логирования
@@ -125,11 +124,15 @@ async def main():
         application = Application.builder().token("8054808302:AAGWzAFYyVWWdCaIi5TzVN-s905cBNtrTms").build()
 
         # Настраиваем ConversationHandler
+        # Build a conversation handler that uses the built‑in filters module.  In
+        # python‑telegram‑bot v22.x, filters are accessed via the `filters`
+        # namespace rather than through individual classes.  We filter out
+        # commands so that only plain text messages are used for the feed URLs.
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("compare", start)],
             states={
-                OLD_FEED: [MessageHandler(Text() & ~Command(), get_old_feed)],
-                NEW_FEED: [MessageHandler(Text() & ~Command(), compare_feeds)],
+                OLD_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_old_feed)],
+                NEW_FEED: [MessageHandler(filters.TEXT & ~filters.COMMAND, compare_feeds)],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
         )
