@@ -1,9 +1,8 @@
-
 flask==2.3.3
-# Use a more recent version of python‑telegram‑bot.  Version 22.3 (released July 20 2025) fixes
+# Use a more recent version of python‑telegram‑bot. Version 22.3 (released July 20, 2025) fixes
 # an issue where the internal `Updater` class was missing a required slot when running
-# under Python 3.13, which resulted in the error:
+# under Python 3.13, which resulted in the error:
 #   AttributeError: 'Updater' object has no attribute '_Updater__polling_cleanup_cb' and no __dict__ for setting new attributes
-# See the changelog for detailshttps://docs.python-telegram-bot.org/en/stable/changelog.html#:~:text=Bug%20Fixes%C2%B6.
+# See the changelog for details: https://docs.python-telegram-bot.org/en/stable/changelog.html#:~:text=Bug%20Fixes%C2%B6.
 python-telegram-bot>=22.3
 requests==2.31.0
